@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Login - RecapAI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        body {
+            /* Nice Purple-Blue Gradient Background */
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            color: white;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            border: none;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        .brand-icon {
+            font-size: 4rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body class="d-flex align-items-center">
+<div class="container">
+    <div class="row justify-content-center align-items-center">
+
+        <div class="col-md-5 text-center text-md-start mb-4 mb-md-0">
+            <i class="bi bi-arrow-repeat brand-icon mb-3 d-block d-md-inline-block"></i>
+            <h1 class="display-4 fw-bold">Welcome to RecapAI</h1>
+            <p class="lead fw-light mb-4">
+                Instantly summarize long documents and generate multiple-choice questions with the power of AI.
+            </p>
+        </div>
+
+        <div class="col-md-5 offset-md-1">
+            <div class="card glass-card p-4">
+                <div class="card-body">
+                    <h3 class="text-center text-dark fw-bold mb-4">Sign In</h3>
+
+                    <div th:if="${param.error}" class="alert alert-danger">Invalid username or password</div>
+                    <div th:if="${param.success}" class="alert alert-success">Registration successful! Please login.</div>
+
+                    <form th:action="@{/login}" method="post">
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-bold">USERNAME</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i class="bi bi-person"></i></span>
+                                <input type="text" name="username" class="form-control bg-light border-start-0" placeholder="Enter username" required>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label text-muted small fw-bold">PASSWORD</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i class="bi bi-lock"></i></span>
+                                <input type="password" name="password" class="form-control bg-light border-start-0" placeholder="Enter password" required>
+                            </div>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg" style="background: #764ba2; border: none;">Login</button>
+                        </div>
+                    </form>
+
+                    <div class="text-center mt-4">
+                        <p class="text-muted small">New to RecapAI? <a href="/register" class="text-primary fw-bold text-decoration-none">Create an Account</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+</body>
+</html>

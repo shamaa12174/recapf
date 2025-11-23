@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>RecapAI Tool</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .main-card { border: none; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .keyword { background-color: #fff3cd; font-weight: bold; padding: 0 2px; border-radius: 2px; }
+        .loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 9999; align-items: center; justify-content: center; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark bg-dark mb-4">
+    <div class="container">
+        <span class="navbar-brand mb-0 h1 d-flex align-items-center">
+            <i class="bi bi-arrow-repeat text-warning me-2"></i>
+            <span class="fw-bold me-3 border-end pe-3">RecapAI</span>
+
+            <span class="fw-light small">
+                <i th:class="${mode == 'summary' ? 'bi bi-file-text' : 'bi bi-ui-checks'}"></i>
+                <span th:text="${mode == 'summary' ? 'Text Summarizer' : 'MCQ Generator'}"></span>
+            </span>
+        </span>
+
+        <div class="d-flex align-items-center gap-3">
+            <a href="/" class="btn btn-sm btn-secondary"><i class="bi bi-house-fill"></i> Home</a>
+            <div class="text-white border-start ps-3 ms-2">
+                <span class="me-2" th:text="${username}"></span>
+                <form th:action="@{/logout}" method="post" class="d-inline">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Logout</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+
+            <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i> <span th:text="${error}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
+            <div class="card main-card p-4">
+
+                <div th:if="${mode == 'summary'}">
+                    <h4 class="mb-4 text-primary"><i class="bi bi-magic"></i> Summarize Content</h4>
+
+                    <ul class="nav nav-tabs mb-3" id="sumTab" role="tablist">
+                        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#sum-text">Paste Text</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#sum-file">Upload File</button></li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <div class="tab-pane fade show active" id="sum-text">
+                            <form th:action="@{/summarize}" method="post" onsubmit="showLoading()">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold small text-muted">SUMMARY LENGTH</label>
+                                    <select name="size" class="form-select">
+                                        <option value="short">Short (Concise)</option>
+                                        <option value="medium" selected>Medium (Balanced)</option>
+                                        <option value="long">Long (Detailed)</option>
+                                    </select>
+                                </div>
+                                <textarea name="text" class="form-control mb-3" rows="6" placeholder="Paste text here..." required></textarea>
+                                <div class="d-grid"><button type="submit" class="btn btn-primary">Summarize</button></div>
+                            </form>
+                        </div>
+
+                        <div class="tab-pane fade" id="sum-file">
+                            <form th:action="@{/upload/summarize}" method="post" enctype="multipart/form-data" onsubmit="showLoading()">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold small text-muted">SUMMARY LENGTH</label>
+                                    <select name="size" class="form-select">
+                                        <option value="short">Short (Concise)</option>
+                                        <option value="medium" selected>Medium (Balanced)</option>
+                                        <option value="long">Long (Detailed)</option>
+                                    </select>
+                                </div>
+                                <input type="file" name="file" class="form-control mb-3" required accept=".txt,.pdf,.docx">
+                                <div class="d-grid"><button type="submit" class="btn btn-success">Upload & Summarize</button></div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div th:if="${summary}" class="mt-4 p-3 bg-light rounded border">
+                        <h5 class="text-success border-bottom pb-2">Summary Result</h5>
+                        <p class="lead fs-6" th:utext="${summary}"></p>
+                    </div>
+
+                    <div th:if="${not #lists.isEmpty(history)}" class="mt-5">
+                        <h6 class="text-muted text-uppercase small fw-bold">Recent Summaries</h6>
+                        <div class="list-group list-group-flush">
+                            <div th:each="item : ${history}" class="list-group-item bg-transparent ps-0 py-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <small class="text-muted" th:text="${#temporals.format(item.createdAt, 'dd-MM HH:mm')}"></small>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" data-bs-toggle="modal" th:data-bs-target="'#modal-' + ${item.id}">
+                                        View Full
+                                    </button>
+                                </div>
+                                <div class="text-truncate text-muted" th:utext="${item.summaryText}"></div>
+
+                                <div class="modal fade" th:id="'modal-' + ${item.id}" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Summary Details</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <h6 class="text-primary">Summary:</h6>
+                                                <div class="p-3 bg-light rounded border mb-4" th:utext="${item.summaryText}"></div>
+
+                                                <h6 class="text-muted">Original Text Snippet:</h6>
+                                                <p class="small text-muted border-start border-3 ps-3" th:text="${item.originalText}"></p>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <small class="text-muted me-auto" th:text="'Generated on: ' + ${#temporals.format(item.createdAt, 'dd-MM-yyyy HH:mm')}"></small>
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div th:if="${mode == 'mcq'}">
+                    <h4 class="mb-4 text-warning"><i class="bi bi-list-check"></i> Generate Questions</h4>
+
+                    <ul class="nav nav-tabs mb-3" id="mcqTab" role="tablist">
+                        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#mcq-text">Paste Text</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#mcq-file">Upload File</button></li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <div class="tab-pane fade show active" id="mcq-text">
+                            <form th:action="@{/mcq/text}" method="post" onsubmit="showLoading()">
+                                <textarea name="text" class="form-control mb-3" rows="6" placeholder="Paste text here..." required></textarea>
+                                <div class="d-grid"><button type="submit" class="btn btn-warning text-white">Generate MCQs</button></div>
+                            </form>
+                        </div>
+                        <div class="tab-pane fade" id="mcq-file">
+                            <form th:action="@{/mcq/upload}" method="post" enctype="multipart/form-data" onsubmit="showLoading()">
+                                <input type="file" name="file" class="form-control mb-3" required accept=".txt,.pdf,.docx">
+                                <div class="d-grid"><button type="submit" class="btn btn-warning text-white">Upload & Generate</button></div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div th:if="${mcqs}" class="mt-4">
+                        <div th:each="q, i : ${mcqs}" class="card mb-3 border">
+                            <div class="card-header bg-light fw-bold">Q<span th:text="${i.index + 1}"></span>: <span th:text="${q.question}"></span></div>
+                            <div class="card-body p-2">
+                                <ul class="list-group list-group-flush">
+                                    <li th:each="opt : ${q.options}" class="list-group-item border-0 py-1">
+                                        <i th:if="${opt == q.correctAnswer}" class="bi bi-check-circle-fill text-success me-2"></i>
+                                        <i th:unless="${opt == q.correctAnswer}" class="bi bi-circle text-muted me-2"></i>
+                                        <span th:text="${opt}" th:class="${opt == q.correctAnswer ? 'fw-bold text-success' : ''}"></span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="text-center">
+        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+        <div class="mt-2 fw-bold">Processing...</div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function showLoading() { document.getElementById('loadingOverlay').style.display = 'flex'; }
+</script>
+</body>
+</html>
